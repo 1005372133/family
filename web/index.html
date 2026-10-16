@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>家庭备忘助理</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/modal.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-top">
+        <h1></h1>
+        <span class="header-date" id="headerDate"></span>
+      </div>
+      <p class="subtitle"></p>
+    </header>
+
+    <section class="filter-section">
+      <div class="time-filters" id="timeFilters"></div>
+      <div class="custom-range" id="customRange" style="display:none;">
+        <input type="date" id="dateFrom">
+        <span>至</span>
+        <input type="date" id="dateTo">
+      </div>
+      <div class="cat-filter-row">
+        <div class="cat-pills" id="catPills"></div>
+        <button class="btn-manage" id="btnManageCats"></button>
+      </div>
+    </section>
+
+    <section class="stats-section" id="statsSection"></section>
+
+    <section class="form-section">
+      <form id="memoForm" class="memo-form">
+        <div class="form-row">
+          <input type="text" id="memoTitle" required maxlength="50">
+          <select id="memoCategory"></select>
+        </div>
+        <div class="form-row">
+          <textarea id="memoContent" maxlength="500"></textarea>
+        </div>
+        <div class="form-row form-row-amount">
+          <input type="date" id="memoDate">
+          <input type="number" id="memoAmount" step="0.01" min="0">
+          <label class="priority-toggle">
+            <input type="checkbox" id="memoPriority">
+            <span class="priority-label"></span>
+          </label>
+        </div>
+        <div class="form-row attachment-row">
+          <div class="file-drop" id="fileDrop">
+            <input type="file" id="memoFiles" multiple accept="image/*,application/pdf" style="display:none;">
+            <span class="file-drop-text"></span>
+          </div>
+        </div>
+        <div class="attachment-previews" id="attachmentPreviews"></div>
+        <div class="form-row form-submit-row">
+          <button type="submit" class="btn-add" id="btnAddMemo"></button>
+        </div>
+      </form>
+    </section>
+
+    <div class="memo-list" id="memoList"></div>
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <div class="empty-icon">📋</div>
+      <p></p>
+      <p class="empty-hint"></p>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="categoryModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="catFormTitle"></h2>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="cat-list" id="catList"></div>
+        <div class="cat-form">
+          <div class="cat-form-row">
+            <label id="labelCatName"></label>
+            <input type="text" id="catName" maxlength="10">
+          </div>
+          <div class="cat-form-row">
+            <label id="labelCatIcon"></label>
+            <div class="emoji-grid" id="emojiGrid"></div>
+          </div>
+          <div class="cat-form-row">
+            <label id="labelCatColor"></label>
+            <div class="color-grid" id="colorGrid"></div>
+          </div>
+          <div class="cat-form-actions">
+            <button class="btn-save" id="btnSaveCat" type="button"></button>
+            <button class="btn-cancel" id="btnCancelEdit" type="button" style="display:none;"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="ocrModal">
+    <div class="modal modal-small">
+      <div class="modal-header">
+        <h2 id="ocrTitleText"></h2>
+        <button class="modal-close" id="ocrModalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="ocr-text" id="ocrText"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lightbox" id="lightbox">
+    <div class="lightbox-backdrop"></div>
+    <div class="lightbox-toolbar">
+      <button class="lightbox-btn" id="lightboxOcr" type="button"></button>
+      <button class="lightbox-btn" id="lightboxDownload" type="button"></button>
+      <button class="lightbox-btn lightbox-close" id="lightboxClose" type="button">&times;</button>
+    </div>
+    <div class="lightbox-content" id="lightboxContent"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

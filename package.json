@@ -1,0 +1,13 @@
+{
+  "name": "family-memo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "sql.js": "^1.10.3"
+  }
+}

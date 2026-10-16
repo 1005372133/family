@@ -1,0 +1,79 @@
+{
+  "site": {
+    "title": "🏠 家庭备忘助理",
+    "subtitle": "家人的每一件小事，都值得被记住"
+  },
+  "defaults": {
+    "timeRange": "week",
+    "dateField": "today"
+  },
+  "categories": [
+    { "id": "shopping", "name": "购物清单", "icon": "🛒", "color": "#81b29a" },
+    { "id": "chores", "name": "家务安排", "icon": "🧹", "color": "#f2cc8f" },
+    { "id": "dates", "name": "重要日期", "icon": "📅", "color": "#3d405b" },
+    { "id": "reminders", "name": "日常提醒", "icon": "🔔", "color": "#e07a5f" }
+  ],
+  "ui": {
+    "emojis": ["🛒","🧹","📅","🔔","💊","🎂","📚","🏥","💰","🎁","🍽️","👶","🐾","✈️","📞","🔧","🎵","💡","🏋️","🎓"],
+    "colors": ["#81b29a","#f2cc8f","#3d405b","#e07a5f","#457b9d","#e63946","#6d6875","#b5838d","#2a9d8f","#e9c46a","#264653","#f4a261"],
+    "timeFilters": [
+      { "key": "week", "label": "最近一周" },
+      { "key": "today", "label": "今天" },
+      { "key": "month", "label": "本月" },
+      { "key": "3months", "label": "近三月" },
+      { "key": "all", "label": "全部" },
+      { "key": "custom", "label": "自定义" }
+    ],
+    "stats": [
+      { "key": "count", "label": "备忘条数" },
+      { "key": "amount", "label": "金额合计", "prefix": "¥" },
+      { "key": "priority", "label": "待办重要" },
+      { "key": "done", "label": "已完成" }
+    ],
+    "labels": {
+      "addMemo": "添加备忘",
+      "saveEdit": "保存修改",
+      "manageCategories": "⚙️ 管理分类",
+      "addCategory": "添加分类",
+      "editCategory": "编辑分类",
+      "categoryName": "名称",
+      "categoryIcon": "图标",
+      "categoryColor": "颜色",
+      "save": "保存",
+      "cancelEdit": "取消编辑",
+      "titlePlaceholder": "备忘标题...",
+      "contentPlaceholder": "详细内容（选填）...",
+      "amountPlaceholder": "金额（选填）",
+      "priorityLabel": "重要",
+      "importantBadge": "重要",
+      "fileDropText": "📎 点击或拖拽上传图片/PDF（支持OCR识别文字）",
+      "emptyTitle": "当前时间范围内暂无备忘",
+      "emptyHint": "调整筛选条件或添加新备忘",
+      "ocrTitle": "OCR 识别结果",
+      "ocrEmpty": "此附件暂无 OCR 识别结果",
+      "deleteMemoConfirm": "确认删除此备忘？",
+      "deleteAttConfirm": "确认删除此附件？",
+      "deleteCatConfirm": "确认删除此分类？",
+      "deleteCatWithMemos": "该分类下还有备忘，删除后相关备忘将变为\"未分类\"。确认删除？",
+      "viewOcr": "📝 文字",
+      "download": "⬇️",
+      "noPreview": "无法预览此文件类型",
+      "today": "今天",
+      "tomorrow": "明天",
+      "yesterday": "昨天",
+      "daysLater": "{n}天后",
+      "daysAgo": "{n}天前",
+      "unknownCategory": "未分类"
+    }
+  },
+  "features": {
+    "ocr": true,
+    "ocrLanguages": "chi_sim+eng",
+    "attachments": true,
+    "amounts": true,
+    "priority": true,
+    "imageAutoRotate": true,
+    "ocrPreprocessing": true,
+    "lightbox": true
+  }
+}
