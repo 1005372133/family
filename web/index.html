@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>家庭备忘助理</title>
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/layout.css">
@@ -10,6 +10,17 @@
   <link rel="stylesheet" href="css/modal.css">
 </head>
 <body>
+  <div class="gate-overlay" id="gateOverlay" style="display:none;">
+    <div class="gate-card">
+      <div class="gate-icon">🔒</div>
+      <h2>访问验证</h2>
+      <p class="gate-hint">请输入访问码以查看内容</p>
+      <input type="password" inputmode="numeric" autocomplete="off" id="gateCode" placeholder="访问码">
+      <button type="button" class="gate-btn" id="gateSubmit">进入</button>
+      <p class="gate-error" id="gateError"></p>
+    </div>
+  </div>
+
   <div class="app">
     <header class="header">
       <div class="header-top">

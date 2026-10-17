@@ -1,7 +1,7 @@
 import * as db from './db.js';
 import * as render from './render.js';
 import { ocrImage, ocrPdf, readExifOrientation, correctImageOrientation, createThumbnail } from './ocr.js';
-import { readFileAsDataUrl, readFileAsArrayBuffer, todayStr } from './utils.js';
+import { readFileAsDataUrl, readFileAsArrayBuffer, todayStr, detectDevice } from './utils.js';
 
 let config = null;
 let state = null;
@@ -299,7 +299,7 @@ function bindMemoForm() {
       }
       state.editingMemoId = null;
     } else {
-      const memo = { id: Date.now(), ...formData, done: false, createdAt: new Date().toISOString() };
+      const memo = { id: Date.now(), ...formData, done: false, createdAt: new Date().toISOString(), source: detectDevice() };
       await db.insertMemo(memo);
       for (const att of savedAttachments) {
         att.memoId = memo.id;

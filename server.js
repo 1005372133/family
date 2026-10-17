@@ -2,6 +2,7 @@ const express = require('express');
 const initSqlJs = require('sql.js');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = 3456;
@@ -9,9 +10,58 @@ const DB_PATH = path.join(__dirname, 'family_memo.db');
 const CONFIG_PATH = path.join(__dirname, 'web', 'config', 'site.json');
 
 app.use(express.json({ limit: '50mb' }));
-app.use(express.static(path.join(__dirname, 'web')));
 
 let db = null;
+let accessCode = null;
+
+function isPrivateIp(ip) {
+  if (!ip) return false;
+  const addr = String(ip).replace(/^::ffff:/, '');
+  if (addr === '::1' || addr === '127.0.0.1') return true;
+  if (addr.startsWith('192.168.')) return true;
+  if (addr.startsWith('10.')) return true;
+  if (addr.startsWith('169.254.')) return true;
+  const m = addr.match(/^172\.(\d{1,2})\./);
+  if (m && +m[1] >= 16 && +m[1] <= 31) return true;
+  if (/^f[cd][0-9a-f]{2}:/i.test(addr)) return true;
+  if (/^fe[89ab][0-9a-f]:/i.test(addr)) return true;
+  return false;
+}
+
+function computeToken() {
+  return crypto.createHash('sha256').update(accessCode + ':family-memo-access').digest('hex');
+}
+
+// Serve config without exposing the access code to clients
+app.get('/config/site.json', (req, res) => {
+  const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
+  if (cfg.access) delete cfg.access.code;
+  res.json(cfg);
+});
+
+app.use(express.static(path.join(__dirname, 'web')));
+
+// Access control
+app.get('/api/access/info', (req, res) => {
+  const required = !!accessCode && !isPrivateIp(req.ip);
+  const unlocked = !required || req.headers['x-access-token'] === computeToken();
+  res.json({ required, unlocked });
+});
+
+app.post('/api/access/verify', (req, res) => {
+  if (!accessCode) return res.json({ ok: true, token: '' });
+  if (String((req.body && req.body.code) || '') === accessCode) {
+    return res.json({ ok: true, token: computeToken() });
+  }
+  res.json({ ok: false });
+});
+
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/access')) return next();
+  if (!accessCode || isPrivateIp(req.ip)) return next();
+  if (req.headers['x-access-token'] === computeToken()) return next();
+  res.status(401).json({ error: 'unauthorized' });
+});
 
 async function initDatabase() {
   const SQL = await initSqlJs();
@@ -30,7 +80,7 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS memos (
       id INTEGER PRIMARY KEY, title TEXT NOT NULL, content TEXT DEFAULT '',
       category_id TEXT, date TEXT, amount REAL, priority INTEGER DEFAULT 0,
-      done INTEGER DEFAULT 0, created_at TEXT NOT NULL
+      done INTEGER DEFAULT 0, created_at TEXT NOT NULL, source TEXT DEFAULT ''
     );
     CREATE TABLE IF NOT EXISTS attachments (
       id TEXT PRIMARY KEY, memo_id INTEGER NOT NULL, data TEXT NOT NULL,
@@ -39,7 +89,10 @@ async function initDatabase() {
     );
   `);
 
+  try { db.run('ALTER TABLE memos ADD COLUMN source TEXT DEFAULT \'\''); } catch (e) { /* column exists */ }
+
   const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
+  accessCode = config.access && config.access.code ? String(config.access.code) : null;
   const catCount = db.exec('SELECT COUNT(*) FROM categories');
   if (!catCount.length || catCount[0].values[0][0] === 0) {
     config.categories.forEach((cat, i) => {
@@ -99,15 +152,15 @@ app.delete('/api/categories/:id', (req, res) => {
 
 // Memos
 app.get('/api/memos', (req, res) => {
-  const rows = query('SELECT id, title, content, category_id AS categoryId, date, amount, priority, done, created_at AS createdAt FROM memos ORDER BY created_at DESC');
+  const rows = query('SELECT id, title, content, category_id AS categoryId, date, amount, priority, done, created_at AS createdAt, source FROM memos ORDER BY created_at DESC');
   rows.forEach(r => { r.priority = !!r.priority; r.done = !!r.done; });
   res.json(rows);
 });
 
 app.post('/api/memos', (req, res) => {
   const m = req.body;
-  run('INSERT INTO memos VALUES (?,?,?,?,?,?,?,?,?)',
-    [m.id, m.title, m.content || '', m.categoryId, m.date, m.amount, m.priority ? 1 : 0, 0, m.createdAt]);
+  run('INSERT INTO memos VALUES (?,?,?,?,?,?,?,?,?,?)',
+    [m.id, m.title, m.content || '', m.categoryId, m.date, m.amount, m.priority ? 1 : 0, 0, m.createdAt, m.source || '']);
   saveDatabase();
   res.json({ ok: true });
 });

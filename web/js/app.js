@@ -3,6 +3,7 @@ import { initOcr } from './ocr.js';
 import { initRender, renderHeader, renderAll } from './render.js';
 import { initEvents, bindAll } from './events.js';
 import { todayStr } from './utils.js';
+import { checkAccess, initGate } from './access.js';
 
 const state = {
   timeRange: 'week',
@@ -22,6 +23,19 @@ const state = {
 let config = null;
 
 async function init() {
+  try {
+    const access = await checkAccess();
+    if (access.required && !access.unlocked) {
+      initGate(startApp);
+      return;
+    }
+  } catch (e) {
+    console.error('Access check failed:', e);
+  }
+  startApp();
+}
+
+async function startApp() {
   try {
     config = await loadConfig();
     state.timeRange = config.defaults.timeRange;

@@ -21,6 +21,36 @@ export function todayStr() {
   return new Date().toISOString().split('T')[0];
 }
 
+export function detectDevice() {
+  const ua = navigator.userAgent;
+  let device = '';
+  if (/iPhone/.test(ua)) device = 'iPhone';
+  else if (/iPad/.test(ua)) device = 'iPad';
+  else if (/Android/.test(ua)) {
+    const m = ua.match(/;\s*([^;)]+)\s+Build\//);
+    const model = m ? m[1].trim() : '';
+    if (/HUAWEI|HarmonyOS/i.test(ua) || /HUAWEI/i.test(model)) device = '华为';
+    else if (/Xiaomi|Redmi|MI\s/i.test(ua) || /Xiaomi|Redmi/i.test(model)) device = '小米';
+    else if (/OPPO|PEM/i.test(ua) || /OPPO/i.test(model)) device = 'OPPO';
+    else if (/vivo/i.test(ua) || /vivo/i.test(model)) device = 'vivo';
+    else if (/Samsung|SM-|GT-/i.test(ua) || /Samsung/i.test(model)) device = '三星';
+    else device = model || 'Android';
+  } else if (/Macintosh|Mac OS X/.test(ua)) device = 'Mac';
+  else if (/Windows/.test(ua)) device = 'Windows';
+  else if (/Linux/.test(ua)) device = 'Linux';
+  else device = '未知设备';
+
+  let browser = '';
+  if (/Edg\//.test(ua)) browser = 'Edge';
+  else if (/OPR\//.test(ua)) browser = 'Opera';
+  else if (/Chrome\//.test(ua)) browser = 'Chrome';
+  else if (/Firefox\//.test(ua)) browser = 'Firefox';
+  else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+  else browser = '浏览器';
+
+  return device + ' · ' + browser;
+}
+
 export function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

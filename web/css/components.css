@@ -260,6 +260,10 @@
 }
 .memo-att-wrap:hover .memo-att-delete { display: flex; }
 
+@media (max-width: 520px) {
+  .memo-att-delete { display: flex; }
+}
+
 .memo-meta {
   margin-top: 10px;
   display: flex;

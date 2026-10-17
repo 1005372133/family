@@ -3,6 +3,9 @@
     "title": "🏠 家庭备忘助理",
     "subtitle": "家人的每一件小事，都值得被记住"
   },
+  "access": {
+    "code": "100537"
+  },
   "defaults": {
     "timeRange": "week",
     "dateField": "today"

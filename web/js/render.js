@@ -179,6 +179,7 @@ export async function renderMemos() {
         <span>${cat.icon} ${cat.name}</span>
         ${dateStr ? `<span>📆 ${dateStr}</span>` : ''}
         <span>🕐 ${new Date(memo.createdAt).toLocaleDateString('zh-CN')}</span>
+        ${memo.source ? `<span>📱 ${escapeHtml(memo.source)}</span>` : ''}
       </div>
     `;
     list.appendChild(card);
