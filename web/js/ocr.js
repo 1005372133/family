@@ -83,12 +83,99 @@ function preprocessForOcr(dataUrl) {
   });
 }
 
-export async function ocrImage(dataUrl) {
+function loadImage(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Image load failed'));
+    img.src = dataUrl;
+  });
+}
+
+function preprocessChunk(img, sx, sy, sw, sh) {
+  return new Promise((resolve) => {
+    const scale = 1500 / sw;
+    const w = Math.round(sw * scale);
+    const h = Math.round(sh * scale);
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+
+    const imageData = ctx.getImageData(0, 0, w, h);
+    const d = imageData.data;
+
+    for (let i = 0; i < d.length; i += 4) {
+      const gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+      d[i] = d[i+1] = d[i+2] = gray;
+    }
+
+    const contrast = 1.5;
+    const intercept = 128 * (1 - contrast);
+    for (let i = 0; i < d.length; i += 4) {
+      const v = Math.min(255, Math.max(0, d[i] * contrast + intercept));
+      d[i] = d[i+1] = d[i+2] = v;
+    }
+
+    const kernel = [0, -1, 0, -1, 5, -1, 0, -1, 0];
+    const src = new Uint8ClampedArray(d);
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        let sum = 0;
+        for (let ky = -1; ky <= 1; ky++) {
+          for (let kx = -1; kx <= 1; kx++) {
+            const idx = ((y + ky) * w + (x + kx)) * 4;
+            sum += src[idx] * kernel[(ky + 1) * 3 + (kx + 1)];
+          }
+        }
+        const idx = (y * w + x) * 4;
+        const val = Math.min(255, Math.max(0, sum));
+        d[idx] = d[idx+1] = d[idx+2] = val;
+      }
+    }
+
+    const threshold = 140;
+    for (let i = 0; i < d.length; i += 4) {
+      const v = d[i] > threshold ? 255 : 0;
+      d[i] = d[i+1] = d[i+2] = v;
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    resolve(canvas.toDataURL('image/png'));
+  });
+}
+
+export async function ocrImage(dataUrl, onProgress) {
   if (!ocrWorker) return '';
   try {
-    const processed = await preprocessForOcr(dataUrl);
-    const { data } = await ocrWorker.recognize(processed);
-    return data.text.trim();
+    const img = await loadImage(dataUrl);
+    const isLong = img.height > img.width * 2;
+
+    if (!isLong) {
+      if (onProgress) onProgress(0, 1, '');
+      const processed = await preprocessForOcr(dataUrl);
+      if (onProgress) onProgress(0, 1, '预处理完成，识别中...');
+      const { data } = await ocrWorker.recognize(processed);
+      return data.text.trim();
+    }
+
+    const chunkHeight = 1500;
+    const chunks = Math.ceil(img.height / chunkHeight);
+    let allText = '';
+
+    for (let i = 0; i < chunks; i++) {
+      if (onProgress) onProgress(i, chunks, `正在识别 ${i + 1}/${chunks}...`);
+      const sy = i * chunkHeight;
+      const sh = Math.min(chunkHeight, img.height - sy);
+      const processed = await preprocessChunk(img, 0, sy, img.width, sh);
+      const { data } = await ocrWorker.recognize(processed);
+      const text = data.text.trim();
+      if (text) allText += (allText ? '\n' : '') + text;
+      if (onProgress) onProgress(i + 1, chunks, allText);
+    }
+
+    return allText;
   } catch (e) { console.warn('OCR failed:', e); return ''; }
 }
 

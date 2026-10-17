@@ -14,12 +14,14 @@ export function initEvents(cfg, st) {
 export function bindAll() {
   bindTimeFilters();
   bindCustomDate();
+  bindSearch();
   bindCategoryPills();
   bindCategoryManager();
   bindFileDrop();
   bindMemoForm();
   bindMemoList();
   bindLightbox();
+  bindPagination();
 }
 
 function bindTimeFilters() {
@@ -27,6 +29,7 @@ function bindTimeFilters() {
     const btn = e.target.closest('.tf-btn');
     if (!btn) return;
     state.timeRange = btn.dataset.range;
+    state.currentPage = 1;
     render.renderTimeFilters();
     await render.renderStats();
     await render.renderMemos();
@@ -36,11 +39,45 @@ function bindTimeFilters() {
 function bindCustomDate() {
   document.getElementById('dateFrom').addEventListener('change', async (e) => {
     state.customFrom = e.target.value;
-    if (state.timeRange === 'custom') { await render.renderStats(); await render.renderMemos(); }
+    if (state.timeRange === 'custom') { state.currentPage = 1; await render.renderStats(); await render.renderMemos(); }
   });
   document.getElementById('dateTo').addEventListener('change', async (e) => {
     state.customTo = e.target.value;
-    if (state.timeRange === 'custom') { await render.renderStats(); await render.renderMemos(); }
+    if (state.timeRange === 'custom') { state.currentPage = 1; await render.renderStats(); await render.renderMemos(); }
+  });
+}
+
+function bindSearch() {
+  const input = document.getElementById('searchInput');
+  let timer = null;
+  input.addEventListener('input', (e) => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      state.searchQuery = e.target.value;
+      state.currentPage = 1;
+      await render.renderStats();
+      await render.renderMemos();
+    }, 200);
+  });
+}
+
+function bindPagination() {
+  document.getElementById('pagination').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.page-btn');
+    if (!btn || btn.disabled) return;
+    const page = btn.dataset.page;
+    if (page === 'prev') state.currentPage--;
+    else if (page === 'next') state.currentPage++;
+    else state.currentPage = Number(page);
+    await render.renderMemos();
+    window.scrollTo({ top: document.getElementById('memoList').offsetTop - 20, behavior: 'smooth' });
+  });
+  document.getElementById('pagination').addEventListener('change', async (e) => {
+    if (e.target.id === 'pageSizeSelect') {
+      state.pageSize = Number(e.target.value);
+      state.currentPage = 1;
+      await render.renderMemos();
+    }
   });
 }
 
@@ -49,6 +86,7 @@ function bindCategoryPills() {
     const pill = e.target.closest('.cat-pill');
     if (!pill) return;
     state.activeCatFilter = pill.dataset.cat;
+    state.currentPage = 1;
     await render.renderCategoryPills();
     await render.renderStats();
     await render.renderMemos();
@@ -194,8 +232,20 @@ async function handleFiles(fileList) {
     if (config.features.ocr) {
       (async () => {
         let text = '';
-        if (file.type.startsWith('image/')) text = await ocrImage(dataUrl);
-        else if (file.type === 'application/pdf') text = await ocrPdf(dataUrl);
+        const contentEl = document.getElementById('memoContent');
+        if (file.type.startsWith('image/')) {
+          text = await ocrImage(dataUrl, (done, total, currentText) => {
+            if (currentText) {
+              const existing = contentEl.value.trim();
+              const base = existing && !existing.startsWith('[OCR]') ? existing + '\n' : '';
+              contentEl.value = base + (total > 1 ? `[OCR ${done}/${total}]\n` : '') + currentText;
+            } else if (total > 1) {
+              contentEl.value = `[OCR 识别中 ${done + 1}/${total}...]`;
+            }
+          });
+        } else if (file.type === 'application/pdf') {
+          text = await ocrPdf(dataUrl);
+        }
         const idx = state.pendingAttachments.findIndex(a => a.id === id);
         if (idx !== -1) {
           state.pendingAttachments[idx].ocrText = text;
@@ -203,9 +253,9 @@ async function handleFiles(fileList) {
           render.renderAttachmentPreviews();
         }
         if (text) {
-          const contentEl = document.getElementById('memoContent');
           const existing = contentEl.value.trim();
-          contentEl.value = existing ? existing + '\n' + text : text;
+          const cleanText = existing.replace(/^\[OCR[^\]]*\]\n?/g, '').trim();
+          contentEl.value = cleanText ? cleanText + '\n' + text : text;
         }
       })();
     }
@@ -259,6 +309,7 @@ function bindMemoForm() {
 
     state.pendingAttachments = [];
     render.renderAttachmentPreviews();
+    state.currentPage = 1;
     await render.renderStats();
     await render.renderMemos();
     document.getElementById('memoForm').reset();
@@ -293,14 +344,24 @@ function bindMemoList() {
       } else if (btn.dataset.action === 'toggle') {
         const memos = await db.getMemos();
         const memo = memos.find(m => m.id === id);
-        if (memo) { await db.toggleMemoDone(id, !memo.done); await render.renderStats(); await render.renderMemos(); }
+        if (memo) { await db.toggleMemoDone(id, !memo.done); state.currentPage = 1; await render.renderStats(); await render.renderMemos(); }
       } else if (btn.dataset.action === 'delete') {
         if (confirm(labels.deleteMemoConfirm)) {
           await db.deleteMemo(id);
+          state.currentPage = 1;
           await render.renderStats();
           await render.renderMemos();
         }
       }
+      return;
+    }
+
+    const toggleBtn = e.target.closest('.memo-content-toggle');
+    if (toggleBtn) {
+      const contentEl = toggleBtn.previousElementSibling;
+      if (!contentEl) return;
+      const isCollapsed = contentEl.classList.toggle('collapsed');
+      toggleBtn.textContent = isCollapsed ? '展开' : '收起';
       return;
     }
 
@@ -333,6 +394,10 @@ function bindMemoList() {
 
       if (attType.startsWith('image/') && fullData) {
         content.innerHTML = `<img src="${fullData}" alt="${escapeHtml(att.name)}">`;
+        const img = content.querySelector('img');
+        if (img) img.style.transform = 'scale(1)';
+        const resetBtn = document.getElementById('lightboxZoomReset');
+        if (resetBtn) resetBtn.textContent = '1:1';
       } else {
         content.innerHTML = `<div style="color:#fff;text-align:center;padding:40px;">${labels.noPreview}</div>`;
       }
@@ -353,9 +418,55 @@ function escapeHtml(str) {
 
 function bindLightbox() {
   const labels = config.ui.labels;
+  let zoom = 1;
+  let isDragging = false;
+  let dragStartX = 0, dragStartY = 0;
+  let scrollStartX = 0, scrollStartY = 0;
 
-  document.getElementById('lightboxClose').addEventListener('click', () => document.getElementById('lightbox').classList.remove('open'));
-  document.querySelector('.lightbox-backdrop').addEventListener('click', () => document.getElementById('lightbox').classList.remove('open'));
+  function applyZoom() {
+    const img = document.querySelector('.lightbox-content img');
+    if (img) img.style.transform = `scale(${zoom})`;
+    const resetBtn = document.getElementById('lightboxZoomReset');
+    if (resetBtn) resetBtn.textContent = zoom === 1 ? '1:1' : Math.round(zoom * 100) + '%';
+  }
+
+  function resetZoom() {
+    zoom = 1;
+    applyZoom();
+    const content = document.getElementById('lightboxContent');
+    if (content) { content.scrollLeft = 0; content.scrollTop = 0; }
+  }
+
+  document.getElementById('lightboxZoomIn').addEventListener('click', () => { zoom = Math.min(5, zoom + 0.25); applyZoom(); });
+  document.getElementById('lightboxZoomOut').addEventListener('click', () => { zoom = Math.max(0.25, zoom - 0.25); applyZoom(); });
+  document.getElementById('lightboxZoomReset').addEventListener('click', resetZoom);
+
+  document.getElementById('lightboxContent').addEventListener('wheel', (e) => {
+    e.preventDefault();
+    zoom = e.deltaY < 0 ? Math.min(5, zoom + 0.1) : Math.max(0.25, zoom - 0.1);
+    applyZoom();
+  }, { passive: false });
+
+  const content = document.getElementById('lightboxContent');
+  content.addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'IMG') {
+      isDragging = true;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      scrollStartX = content.scrollLeft;
+      scrollStartY = content.scrollTop;
+      e.preventDefault();
+    }
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    content.scrollLeft = scrollStartX - (e.clientX - dragStartX);
+    content.scrollTop = scrollStartY - (e.clientY - dragStartY);
+  });
+  document.addEventListener('mouseup', () => { isDragging = false; });
+
+  document.getElementById('lightboxClose').addEventListener('click', () => { resetZoom(); document.getElementById('lightbox').classList.remove('open'); });
+  document.querySelector('.lightbox-backdrop').addEventListener('click', () => { resetZoom(); document.getElementById('lightbox').classList.remove('open'); });
 
   document.getElementById('lightboxOcr').addEventListener('click', () => {
     const text = document.getElementById('lightbox').dataset.ocrText;

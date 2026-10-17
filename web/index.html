@@ -20,21 +20,28 @@
     </header>
 
     <section class="filter-section">
-      <div class="time-filters" id="timeFilters"></div>
-      <div class="custom-range" id="customRange" style="display:none;">
-        <input type="date" id="dateFrom">
-        <span>至</span>
-        <input type="date" id="dateTo">
+      <div class="filter-bar">
+        <div class="time-filters" id="timeFilters"></div>
+        <div class="custom-range" id="customRange" style="display:none;">
+          <input type="date" id="dateFrom">
+          <span>至</span>
+          <input type="date" id="dateTo">
+        </div>
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="搜索标题...">
+        </div>
       </div>
       <div class="cat-filter-row">
         <div class="cat-pills" id="catPills"></div>
-        <button class="btn-manage" id="btnManageCats"></button>
       </div>
     </section>
 
     <section class="stats-section" id="statsSection"></section>
 
     <section class="form-section">
+      <div class="form-header">
+        <button class="btn-manage-cats" id="btnManageCats"></button>
+      </div>
       <form id="memoForm" class="memo-form">
         <div class="form-row">
           <input type="text" id="memoTitle" required maxlength="50">
@@ -70,6 +77,8 @@
       <p></p>
       <p class="empty-hint"></p>
     </div>
+
+    <div class="pagination" id="pagination"></div>
   </div>
 
   <div class="modal-overlay" id="categoryModal">
@@ -117,6 +126,9 @@
   <div class="lightbox" id="lightbox">
     <div class="lightbox-backdrop"></div>
     <div class="lightbox-toolbar">
+      <button class="lightbox-btn" id="lightboxZoomOut" type="button" title="缩小">🔍−</button>
+      <button class="lightbox-btn" id="lightboxZoomReset" type="button" title="重置"></button>
+      <button class="lightbox-btn" id="lightboxZoomIn" type="button" title="放大">🔍+</button>
       <button class="lightbox-btn" id="lightboxOcr" type="button"></button>
       <button class="lightbox-btn" id="lightboxDownload" type="button"></button>
       <button class="lightbox-btn lightbox-close" id="lightboxClose" type="button">&times;</button>

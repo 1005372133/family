@@ -97,11 +97,13 @@ function getTimeRange() {
 async function filterMemos() {
   const { start, end } = getTimeRange();
   const allMemos = await db.getMemos();
+  const query = state.searchQuery.toLowerCase().trim();
   return allMemos.filter(m => {
-    const d = new Date(m.createdAt);
+    const d = m.date ? new Date(m.date) : new Date(m.createdAt);
     if (start && d < start) return false;
     if (end && d > end) return false;
     if (state.activeCatFilter !== 'all' && m.categoryId !== state.activeCatFilter) return false;
+    if (query && !m.title.toLowerCase().includes(query)) return false;
     return true;
   });
 }
@@ -133,12 +135,18 @@ export async function renderMemos() {
   const emptyState = document.getElementById('emptyState');
   if (!list) return;
   list.innerHTML = '';
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / state.pageSize));
+  if (state.currentPage > totalPages) state.currentPage = totalPages;
+  const start = (state.currentPage - 1) * state.pageSize;
+  const pageItems = sorted.slice(start, start + state.pageSize);
+
   if (emptyState) emptyState.style.display = sorted.length === 0 ? 'block' : 'none';
 
   const cats = await db.getCategories();
   const labels = config.ui.labels;
 
-  for (const memo of sorted) {
+  for (const memo of pageItems) {
     const cat = cats.find(c => c.id === memo.categoryId) || { icon: '📌', name: labels.unknownCategory, color: '#999' };
     const card = document.createElement('div');
     card.className = `memo-card${memo.priority ? ' priority' : ''}${memo.done ? ' done' : ''}`;
@@ -164,7 +172,7 @@ export async function renderMemos() {
           <button data-action="delete" data-id="${memo.id}" title="删除">🗑️</button>
         </div>
       </div>
-      ${memo.content ? `<div class="memo-content">${escapeHtml(memo.content)}</div>` : ''}
+      ${memo.content ? `<div class="memo-content collapsed">${escapeHtml(memo.content)}</div><button class="memo-content-toggle" style="display:none">展开</button>` : ''}
       ${memo.amount ? `<div class="memo-amount">¥${Number(memo.amount).toFixed(2)}</div>` : ''}
       ${attHtml ? `<div class="memo-attachments">${attHtml}</div>` : ''}
       <div class="memo-meta">
@@ -174,7 +182,17 @@ export async function renderMemos() {
       </div>
     `;
     list.appendChild(card);
+    if (memo.content) {
+      const contentEl = card.querySelector('.memo-content');
+      const toggleBtn = card.querySelector('.memo-content-toggle');
+      if (contentEl && toggleBtn && contentEl.scrollHeight > contentEl.clientHeight + 1) {
+        toggleBtn.style.display = '';
+      } else if (contentEl && toggleBtn) {
+        contentEl.classList.remove('collapsed');
+      }
+    }
   }
+  renderPagination(sorted.length);
 }
 
 export function renderEmojiGrid() {
@@ -216,6 +234,29 @@ export function renderAttachmentPreviews() {
   }).join('');
 }
 
+export function renderPagination(total) {
+  const el = document.getElementById('pagination');
+  if (!el) return;
+  if (total <= state.pageSize) { el.innerHTML = ''; return; }
+  const totalPages = Math.ceil(total / state.pageSize);
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) pages.push(i);
+  el.innerHTML = `
+    <div class="page-size-row">
+      <span>每页</span>
+      <select id="pageSizeSelect">
+        ${[10,20,50,100].map(n => `<option value="${n}"${n === state.pageSize ? ' selected' : ''}>${n}</option>`).join('')}
+      </select>
+      <span>条</span>
+    </div>
+    <div class="page-btns">
+      <button class="page-btn" data-page="prev" ${state.currentPage === 1 ? 'disabled' : ''}>上一页</button>
+      ${pages.map(p => `<button class="page-btn${p === state.currentPage ? ' active' : ''}" data-page="${p}">${p}</button>`).join('')}
+      <button class="page-btn" data-page="next" ${state.currentPage === totalPages ? 'disabled' : ''}>下一页</button>
+    </div>
+  `;
+}
+
 export async function renderAll() {
   try { renderSiteText(); } catch (e) { console.error('renderSiteText failed:', e); }
   try { renderTimeFilters(); } catch (e) { console.error('renderTimeFilters failed:', e); }
@@ -223,6 +264,7 @@ export async function renderAll() {
   try { await renderCategorySelect(); } catch (e) { console.error('renderCategorySelect failed:', e); }
   try { await renderStats(); } catch (e) { console.error('renderStats failed:', e); }
   try { await renderMemos(); } catch (e) { console.error('renderMemos failed:', e); }
+  try { renderPagination(0); } catch (e) { console.error('renderPagination failed:', e); }
 }
 
 export { filterMemos, getTimeRange };

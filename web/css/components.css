@@ -189,7 +189,28 @@
 }
 .memo-actions button:hover { opacity: 1; background: var(--bg); }
 
-.memo-content { margin-top: 6px; font-size: 0.82rem; color: var(--text-secondary); }
+.memo-content {
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  word-break: break-word;
+}
+.memo-content.collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.memo-content-toggle {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 2px 0;
+  margin-top: 2px;
+}
 
 .memo-amount {
   margin-top: 8px;
